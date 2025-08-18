@@ -1,0 +1,17 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow read and write access to registrations collection
+    // Note: This is for development purposes only
+    // For production, implement proper authentication and authorization
+    match /registrations/{document} {
+      allow read, write: if true;
+    }
+    
+    // You can add more restrictive rules here for production:
+    // match /registrations/{document} {
+    //   allow read: if request.auth != null && request.auth.token.admin == true;
+    //   allow write: if request.auth != null;
+    // }
+  }
+}
