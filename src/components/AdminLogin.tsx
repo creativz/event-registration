@@ -46,7 +46,7 @@ const AdminLogin: React.FC = () => {
           Admin Login
         </h2>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Access the Malikhaing Pinoy Expo 2025 management panel
+          Access the Malikhaing Pinoy Expo 2025 Dashboard
         </p>
       </div>
 
@@ -120,24 +120,6 @@ const AdminLogin: React.FC = () => {
               </button>
             </div>
           </form>
-
-          <div className="mt-6">
-            <div className="relative">
-              <div className="absolute inset-0 flex items-center">
-                <div className="w-full border-t border-gray-300" />
-              </div>
-              <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Demo Credentials</span>
-              </div>
-            </div>
-            <div className="mt-4 text-center text-xs text-gray-500">
-              <p>Email: <span className="font-mono">admin@event.com</span></p>
-              <p>Password: <span className="font-mono">admin123</span></p>
-              <p className="mt-2 text-gray-400">
-                Contact administrator to create your account
-              </p>
-            </div>
-          </div>
         </div>
       </div>
 

@@ -3,7 +3,8 @@ import { useForm } from 'react-hook-form';
 import { toast } from 'react-hot-toast';
 import { firebaseService } from '../services/firebaseService';
 import { RegistrationData } from '../types';
-import { CheckCircle, Loader2 } from 'lucide-react';
+import { User, Mail, Phone, Building, Calendar, CheckCircle, XCircle, Loader } from 'lucide-react';
+import ReCAPTCHA from 'react-google-recaptcha';
 
 interface FormData {
   email: string;
@@ -24,14 +25,16 @@ interface FormData {
 
 const RegistrationForm: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [isSuccess, setIsSuccess] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
   
   const {
     register,
     handleSubmit,
-    reset,
-    watch,
     formState: { errors },
+    reset,
+    watch
   } = useForm<FormData>({
     defaultValues: {
       eventDays: {
@@ -40,21 +43,55 @@ const RegistrationForm: React.FC = () => {
         friSept5: false,
         satSept6: false,
         sunSept7: false,
-        notAttending: false,
+        notAttending: false
       }
     }
   });
 
   const watchedEventDays = watch('eventDays');
 
+  // Check if any event day is selected
+  const hasEventDaySelected = Object.values(watchedEventDays).some(day => day);
+  
+  // Check if "not attending" is selected
+  const isNotAttending = watchedEventDays.notAttending;
+
+  // Disable event days if "not attending" is selected
+  const eventDaysDisabled = isNotAttending;
+  
+  // Disable "not attending" if any event day is selected
+  const notAttendingDisabled = hasEventDaySelected && !isNotAttending;
+
   const onSubmit = async (data: FormData) => {
+    // Validate CAPTCHA
+    if (!captchaToken) {
+      setCaptchaError('Please complete the CAPTCHA verification');
+      toast.error('Please complete the CAPTCHA verification');
+      return;
+    }
+
     setIsSubmitting(true);
+    setCaptchaError(null);
     
     try {
-      await firebaseService.addRegistration(data);
-      setIsSubmitted(true);
+      // Validate that at least one event day is selected
+      const selectedDays = Object.values(data.eventDays);
+      if (!selectedDays.some(day => day)) {
+        toast.error('Please select at least one event day or "Not Attending"');
+        return;
+      }
+
+      const registrationData: Omit<RegistrationData, 'id' | 'registrationDate'> = {
+        ...data
+      };
+
+      const registrationId = await firebaseService.addRegistration(registrationData);
+      
+      console.log('Registration successful:', registrationId);
+      setIsSuccess(true);
       reset();
-      toast.success('Registration successful! Check your email for confirmation.');
+      setCaptchaToken(null);
+      toast.success('Registration successful! Check your email for confirmation with QR code and short ID.');
     } catch (error) {
       console.error('Registration error:', error);
       toast.error('Registration failed. Please try again.');
@@ -63,13 +100,23 @@ const RegistrationForm: React.FC = () => {
     }
   };
 
-  if (isSubmitted) {
+  const handleCaptchaChange = (token: string | null) => {
+    setCaptchaToken(token);
+    setCaptchaError(null);
+  };
+
+  const handleCaptchaExpired = () => {
+    setCaptchaToken(null);
+    setCaptchaError('CAPTCHA expired. Please complete it again.');
+  };
+
+  if (isSuccess) {
     return (
       <div className="card text-center py-12">
         <CheckCircle className="w-16 h-16 text-green-500 mx-auto mb-4" />
         <h3 className="text-2xl font-bold text-gray-800 mb-2">Registration Successful!</h3>
         <p className="text-gray-600 mb-4">
-          Thank you for registering! You will receive a confirmation email with your unique QR code shortly.
+          Thank you for registering! You will receive a confirmation email with your unique QR code and registration ID shortly.
         </p>
         <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
           <h4 className="font-semibold text-blue-800 mb-2">📧 Check Your Email</h4>
@@ -78,7 +125,7 @@ const RegistrationForm: React.FC = () => {
           </p>
         </div>
         <button
-          onClick={() => setIsSubmitted(false)}
+          onClick={() => setIsSuccess(false)}
           className="btn-primary"
         >
           Register Another Person
@@ -90,7 +137,7 @@ const RegistrationForm: React.FC = () => {
   return (
     <div className="card">
       <div className="text-center mb-8">
-        <h2 className="text-3xl font-bold text-gray-800 mb-2">Register for the Event</h2>
+        <h2 className="text-3xl lg:text-4xl font-bold mb-2 mpx-text-blue">Register for the Event</h2>
         <p className="text-gray-600">Secure your spot at the Malikhaing Pinoy Expo 2025</p>
       </div>
 
@@ -276,14 +323,32 @@ const RegistrationForm: React.FC = () => {
           )}
         </div>
 
+        {/* reCAPTCHA */}
+        <div className="space-y-3">
+          <label className="block text-sm font-medium text-gray-700">
+            Security Verification *
+          </label>
+          <div className="flex justify-center">
+            <ReCAPTCHA
+              sitekey="6LdZy6orAAAAAL0AwF8IflXwqmO_YWHwFufmHzmk" // Replace with your actual reCAPTCHA site key
+              onChange={handleCaptchaChange}
+              onExpired={handleCaptchaExpired}
+              theme="light"
+            />
+          </div>
+          {captchaError && (
+            <p className="text-red-500 text-sm mt-2 text-center">{captchaError}</p>
+          )}
+        </div>
+
         <button
           type="submit"
-          disabled={isSubmitting || Object.values(watchedEventDays).every(day => !day)}
+          disabled={isSubmitting || Object.values(watchedEventDays).every(day => !day) || !captchaToken}
           className="btn-primary w-full text-lg py-4 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {isSubmitting ? (
             <div className="flex items-center justify-center space-x-2">
-              <Loader2 className="w-5 h-5 animate-spin" />
+              <Loader className="w-5 h-5 animate-spin" />
               <span>Processing...</span>
             </div>
           ) : (

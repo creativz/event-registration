@@ -2,13 +2,28 @@
 @tailwind components;
 @tailwind utilities;
 
+@font-face {
+  font-family: 'Reimbrandt';
+  src: url('./assets/fonts/reimbrandt-webfont.woff2') format('woff2'),
+       url('./assets/fonts/reimbrandt-webfont.woff') format('woff');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Import Montserrat from Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@300;400;500;600;700&display=swap');
+
 @layer base {
   html {
     scroll-behavior: smooth;
   }
+  h1, h2, h3, h4, h5, h6 {
+    font-family: 'Reimbrandt', serif!important;
+  }
   
   body {
-    font-family: 'Inter', system-ui, sans-serif;
+    font-family: 'Montserrat', 'Inter', system-ui, sans-serif;
   }
 }
 
@@ -28,4 +43,100 @@
   .card {
     @apply bg-white rounded-xl shadow-lg p-6 border border-gray-100;
   }
+}
+
+
+.montserrat-font {
+  font-family: 'Montserrat', 'Inter', system-ui, sans-serif!important;
+}
+
+.mpx-text-blue {
+  color: rgb(3, 14, 156)!important;
+}
+
+/* Banner Logo Animations */
+@keyframes swipeRight {
+  0% {
+    -webkit-transform: scaleX(0);
+            transform: scaleX(0);
+    -webkit-transform-origin: 100% 100%;
+            transform-origin: 100% 100%;
+    opacity: 0;
+  }
+  100% {
+    -webkit-transform: scaleX(1);
+            transform: scaleX(1);
+    -webkit-transform-origin: 100% 100%;
+            transform-origin: 100% 100%;
+    opacity: 1;
+  }
+}
+
+@keyframes slideInLeft {
+  0% {
+    transform: translateX(-50%);
+    opacity: 0;
+  }
+  100% {
+    transform: translateX(0);
+    opacity: 1;
+  }
+}
+
+@keyframes swipeDown {
+  0% {
+    -webkit-transform: scaleY(0);
+            transform: scaleY(0);
+    -webkit-transform-origin: 100% 0%;
+            transform-origin: 100% 0%;
+    opacity: 0;
+  }
+  100% {
+    -webkit-transform: scaleY(1);
+            transform: scaleY(1);
+    -webkit-transform-origin: 100% 0%;
+            transform-origin: 100% 0%;
+    opacity: 1;
+  }
+}
+
+@keyframes slide-in-elliptic-top-fwd {
+  0% {
+    -webkit-transform: translateY(-600px) rotateX(-20deg) scale(0);
+            transform: translateY(-600px) rotateX(-20deg) scale(0);
+    -webkit-transform-origin: 50% 100%;
+            transform-origin: 50% 100%;
+    opacity: 0;
+  }
+  100% {
+    -webkit-transform: translateY(0) rotateX(0) scale(1);
+            transform: translateY(0) rotateX(0) scale(1);
+    -webkit-transform-origin: 50% 800px;
+            transform-origin: 50% 800px;
+    opacity: 1;
+  }
+}
+
+.bannerAnimate1 {
+  animation: swipeRight .5s ease-out forwards;
+  animation-delay: 1s;
+  opacity: 0;
+}
+
+.bannerAnimate2 {
+  animation: slideInLeft .5s ease-out forwards;
+  animation-delay: .5s;
+  opacity: 0;
+}
+
+.bannerAnimate3 {
+  animation: swipeDown .5s ease-out forwards;
+  animation-delay: .7s;
+  opacity: 0;
+}
+
+.bannerAnimate4 {
+  animation: slide-in-elliptic-top-fwd .5s ease-out forwards;
+  animation-delay: 1.2s;
+  opacity: 0;
 }

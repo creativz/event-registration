@@ -15,6 +15,7 @@ const QRVerification: React.FC = () => {
     success: boolean;
     registration?: RegistrationData;
     message: string;
+    showRegisterButton?: boolean;
   } | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [manualId, setManualId] = useState('');
@@ -26,6 +27,7 @@ const QRVerification: React.FC = () => {
   const [isScanning, setIsScanning] = useState(false);
   const [showDebugImage, setShowDebugImage] = useState(false);
   const [debugImageData, setDebugImageData] = useState<string | null>(null);
+  const [selectedEventDay, setSelectedEventDay] = useState('wedSept3');
   const fileInputRef = useRef<HTMLInputElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -209,10 +211,16 @@ const QRVerification: React.FC = () => {
     setVerificationResult(null);
 
     try {
-      // Verify QR code data
+      console.log('QR Code data received:', qrCodeData);
+      console.log('QR Code data length:', qrCodeData.length);
+      console.log('QR Code data type:', typeof qrCodeData);
+      
+      // Verify QR code data format
       const verifiedData = qrCodeService.verifyQRCode(qrCodeData);
+      console.log('Verified data:', verifiedData);
       
       if (!verifiedData) {
+        console.log('QR code verification failed - invalid format');
         setVerificationResult({
           success: false,
           message: 'Invalid QR code format'
@@ -220,11 +228,14 @@ const QRVerification: React.FC = () => {
         return;
       }
 
-      // Get registration data from Firebase
-      const registrations = await firebaseService.getRegistrations();
-      const registration = registrations.find(r => r.id === verifiedData.registrationId);
+      console.log('Looking up registration with short ID:', verifiedData.registrationId);
+      
+      // Get registration data from Firebase using short ID
+      const registration = await firebaseService.getRegistrationByShortId(verifiedData.registrationId);
+      console.log('Registration found:', registration);
 
       if (!registration) {
+        console.log('Registration not found for short ID:', verifiedData.registrationId);
         setVerificationResult({
           success: false,
           message: 'Registration not found'
@@ -232,13 +243,58 @@ const QRVerification: React.FC = () => {
         return;
       }
 
-      setVerificationResult({
-        success: true,
-        registration,
-        message: 'Registration verified successfully'
-      });
+      // Check if participant is registered for the selected event day
+      const eventDayKey = selectedEventDay as keyof typeof registration.eventDays;
+      console.log('Checking event day:', selectedEventDay, 'Registered:', registration.eventDays[eventDayKey]);
+      console.log('All registered days:', registration.eventDays);
+      
+      if (!registration.eventDays[eventDayKey]) {
+        // Show which days they are registered for
+        const registeredDays = [];
+        if (registration.eventDays.wedSept3) registeredDays.push('Wednesday, September 3');
+        if (registration.eventDays.thursSept4) registeredDays.push('Thursday, September 4');
+        if (registration.eventDays.friSept5) registeredDays.push('Friday, September 5');
+        if (registration.eventDays.satSept6) registeredDays.push('Saturday, September 6');
+        if (registration.eventDays.sunSept7) registeredDays.push('Sunday, September 7');
+        if (registration.eventDays.notAttending) registeredDays.push('Not Attending');
+        
+        const registeredDaysText = registeredDays.length > 0 ? registeredDays.join(', ') : 'No days selected';
+        
+        setVerificationResult({
+          success: false,
+          message: `Participant is not registered for ${getEventDayName(selectedEventDay)}. They are registered for: ${registeredDaysText}`,
+          registration, // Include registration data even for failed verification
+          showRegisterButton: true // Flag to show register button
+        });
+        return;
+      }
 
-      toast.success(`Welcome, ${registration.firstName} ${registration.lastName}!`);
+      // Record attendance
+      try {
+        console.log('Recording attendance for:', registration.firstName, registration.lastName);
+        await firebaseService.recordAttendance(
+          registration,
+          selectedEventDay,
+          authUser?.email || 'Unknown',
+          qrCodeData
+        );
+        
+        setVerificationResult({
+          success: true,
+          registration,
+          message: `Attendance recorded for ${getEventDayName(selectedEventDay)}`
+        });
+
+        toast.success(`Welcome, ${registration.firstName} ${registration.lastName}! Attendance recorded.`);
+      } catch (attendanceError) {
+        console.error('Error recording attendance:', attendanceError);
+        setVerificationResult({
+          success: true,
+          registration,
+          message: 'Verification successful but attendance recording failed'
+        });
+        toast.success(`Welcome, ${registration.firstName} ${registration.lastName}!`);
+      }
     } catch (error) {
       console.error('Verification error:', error);
       setVerificationResult({
@@ -261,8 +317,17 @@ const QRVerification: React.FC = () => {
     setVerificationResult(null);
 
     try {
-      const registrations = await firebaseService.getRegistrations();
-      const registration = registrations.find(r => r.id === manualId.trim());
+      // Validate short ID format
+      if (!/^[A-Z0-9]{6}$/.test(manualId.trim())) {
+        setVerificationResult({
+          success: false,
+          message: 'Invalid registration ID format. Please enter a 6-character code.'
+        });
+        return;
+      }
+
+      // Get registration data from Firebase using short ID
+      const registration = await firebaseService.getRegistrationByShortId(manualId.trim());
 
       if (!registration) {
         setVerificationResult({
@@ -272,13 +337,53 @@ const QRVerification: React.FC = () => {
         return;
       }
 
-      setVerificationResult({
-        success: true,
-        registration,
-        message: 'Registration verified successfully'
-      });
+      // Check if participant is registered for the selected event day
+      const eventDayKey = selectedEventDay as keyof typeof registration.eventDays;
+      if (!registration.eventDays[eventDayKey]) {
+        // Show which days they are registered for
+        const registeredDays = [];
+        if (registration.eventDays.wedSept3) registeredDays.push('Wednesday, September 3');
+        if (registration.eventDays.thursSept4) registeredDays.push('Thursday, September 4');
+        if (registration.eventDays.friSept5) registeredDays.push('Friday, September 5');
+        if (registration.eventDays.satSept6) registeredDays.push('Saturday, September 6');
+        if (registration.eventDays.sunSept7) registeredDays.push('Sunday, September 7');
+        if (registration.eventDays.notAttending) registeredDays.push('Not Attending');
+        
+        const registeredDaysText = registeredDays.length > 0 ? registeredDays.join(', ') : 'No days selected';
+        
+        setVerificationResult({
+          success: false,
+          message: `Participant is not registered for ${getEventDayName(selectedEventDay)}. They are registered for: ${registeredDaysText}`,
+          registration // Include registration data even for failed verification
+        });
+        return;
+      }
 
-      toast.success(`Welcome, ${registration.firstName} ${registration.lastName}!`);
+      // Record attendance
+      try {
+        await firebaseService.recordAttendance(
+          registration,
+          selectedEventDay,
+          authUser?.email || 'Unknown',
+          manualId.trim()
+        );
+        
+        setVerificationResult({
+          success: true,
+          registration,
+          message: `Attendance recorded for ${getEventDayName(selectedEventDay)}`
+        });
+
+        toast.success(`Welcome, ${registration.firstName} ${registration.lastName}! Attendance recorded.`);
+      } catch (attendanceError) {
+        console.error('Error recording attendance:', attendanceError);
+        setVerificationResult({
+          success: true,
+          registration,
+          message: 'Verification successful but attendance recording failed'
+        });
+        toast.success(`Welcome, ${registration.firstName} ${registration.lastName}!`);
+      }
     } catch (error) {
       console.error('Manual verification error:', error);
       setVerificationResult({
@@ -393,6 +498,46 @@ const QRVerification: React.FC = () => {
     }
   };
 
+  const getEventDayName = (dayKey: string): string => {
+    const dayNames: { [key: string]: string } = {
+      'wedSept3': 'Wednesday, September 3',
+      'thursSept4': 'Thursday, September 4',
+      'friSept5': 'Friday, September 5',
+      'satSept6': 'Saturday, September 6',
+      'sunSept7': 'Sunday, September 7'
+    };
+    return dayNames[dayKey] || dayKey;
+  };
+
+  const handleRegisterForDay = async (registration: RegistrationData, eventDay: string) => {
+    setIsVerifying(true);
+    
+    try {
+      // Update the registration to include the new event day
+      const success = await firebaseService.updateEventDayRegistration(
+        registration.id!,
+        eventDay,
+        true
+      );
+      
+      if (success) {
+        toast.success(`Successfully registered ${registration.firstName} ${registration.lastName} for ${getEventDayName(eventDay)}!`);
+        
+        // Re-verify with the updated registration
+        setTimeout(() => {
+          handleQRVerification(qrData);
+        }, 1000);
+      } else {
+        toast.error('Failed to register for this day. Please try again.');
+      }
+    } catch (error) {
+      console.error('Error registering for day:', error);
+      toast.error('Failed to register for this day. Please try again.');
+    } finally {
+      setIsVerifying(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-8">
       {/* Header with user info and logout */}
@@ -428,6 +573,24 @@ const QRVerification: React.FC = () => {
             <QrCode className="w-16 h-16 text-primary-600 mx-auto mb-4" />
             <h2 className="text-3xl font-bold text-gray-800 mb-2">Event Check-in</h2>
             <p className="text-gray-600">Scan QR code or enter registration ID to verify attendance</p>
+            
+            {/* Event Day Selector */}
+            <div className="mt-6">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Select Event Day
+              </label>
+              <select
+                value={selectedEventDay}
+                onChange={(e) => setSelectedEventDay(e.target.value)}
+                className="w-full max-w-xs px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+              >
+                <option value="wedSept3">Wednesday, September 3 - Creative Domain Showcase</option>
+                <option value="thursSept4">Thursday, September 4 - Opening Program</option>
+                <option value="friSept5">Friday, September 5 - Creative Domain Showcase</option>
+                <option value="satSept6">Saturday, September 6 - Creative Domain Showcase</option>
+                <option value="sunSept7">Sunday, September 7 - Closing Program</option>
+              </select>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
@@ -449,38 +612,6 @@ const QRVerification: React.FC = () => {
                       >
                         <Camera className="w-4 h-4" />
                         <span>Start Camera Scanner</span>
-                      </button>
-                      <button
-                        onClick={async () => {
-                          try {
-                            const devices = await navigator.mediaDevices.enumerateDevices();
-                            const videoDevices = devices.filter(device => device.kind === 'videoinput');
-                            console.log('Available video devices:', videoDevices);
-                            toast.success(`Found ${videoDevices.length} camera(s)`);
-                          } catch (error) {
-                            console.error('Error enumerating devices:', error);
-                            toast.error('Error checking cameras');
-                          }
-                        }}
-                        className="w-full bg-gray-500 text-white py-1 px-2 rounded text-xs hover:bg-gray-600"
-                      >
-                        Debug: Check Available Cameras
-                      </button>
-                      <button
-                        onClick={() => {
-                          // Generate a test QR code data
-                          const testData = {
-                            registrationId: 'test-registration-123',
-                            timestamp: new Date().toISOString(),
-                            event: 'Malikhaing Pinoy Expo 2025'
-                          };
-                          const qrData = JSON.stringify(testData);
-                          setQrData(qrData);
-                          toast.success('Test QR code data generated. Use "Verify QR Code" button to test.');
-                        }}
-                        className="w-full bg-blue-500 text-white py-1 px-2 rounded text-xs hover:bg-blue-600"
-                      >
-                        Generate Test QR Data
                       </button>
                     </div>
                   ) : (
@@ -631,9 +762,10 @@ const QRVerification: React.FC = () => {
                   <input
                     type="text"
                     value={manualId}
-                    onChange={(e) => setManualId(e.target.value)}
-                    placeholder="Enter registration ID..."
+                    onChange={(e) => setManualId(e.target.value.toUpperCase())}
+                    placeholder="Enter 6-character code (e.g., ABC123)..."
                     className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent"
+                    maxLength={6}
                   />
                 </div>
 
@@ -683,8 +815,71 @@ const QRVerification: React.FC = () => {
                         <p><strong>Name:</strong> {verificationResult.registration.firstName} {verificationResult.registration.lastName}</p>
                         <p><strong>Email:</strong> {verificationResult.registration.email}</p>
                         <p><strong>Institution:</strong> {verificationResult.registration.institution}</p>
-                        <p><strong>Registration ID:</strong> {verificationResult.registration.id}</p>
+                        <p><strong>Registration ID:</strong> {verificationResult.registration.shortId || verificationResult.registration.id}</p>
                         <p><strong>Registration Date:</strong> {verificationResult.registration.registrationDate.toLocaleDateString()}</p>
+                        
+                        {/* Show registered days */}
+                        <div className="mt-3">
+                          <p><strong>Registered for:</strong></p>
+                          <ul className="list-disc list-inside ml-2">
+                            {verificationResult.registration.eventDays.wedSept3 && <li>Wednesday, September 3</li>}
+                            {verificationResult.registration.eventDays.thursSept4 && <li>Thursday, September 4</li>}
+                            {verificationResult.registration.eventDays.friSept5 && <li>Friday, September 5</li>}
+                            {verificationResult.registration.eventDays.satSept6 && <li>Saturday, September 6</li>}
+                            {verificationResult.registration.eventDays.sunSept7 && <li>Sunday, September 7</li>}
+                            {verificationResult.registration.eventDays.notAttending && <li>Not Attending</li>}
+                          </ul>
+                        </div>
+                        
+                        {/* Register for current day button */}
+                        {!verificationResult.success && verificationResult.registration && (
+                          <div className="mt-3 p-3 bg-green-50 rounded border border-green-200">
+                            <p className="text-sm text-green-800 mb-2">
+                              <strong>On-site Registration:</strong> Add this participant to {getEventDayName(selectedEventDay)}
+                            </p>
+                            <button
+                              onClick={() => handleRegisterForDay(verificationResult.registration!, selectedEventDay)}
+                              disabled={isVerifying}
+                              className="w-full bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 text-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                              {isVerifying ? 'Registering...' : `Register for ${getEventDayName(selectedEventDay)}`}
+                            </button>
+                          </div>
+                        )}
+                        
+                        {/* Quick day selector for failed verification */}
+                        {!verificationResult.success && (
+                          <div className="mt-3 p-3 bg-blue-50 rounded border border-blue-200">
+                            <p className="text-sm text-blue-800 mb-2">
+                              <strong>Quick Fix:</strong> Select the correct event day and try again:
+                            </p>
+                            <select
+                              value={selectedEventDay}
+                              onChange={(e) => setSelectedEventDay(e.target.value)}
+                              className="w-full px-3 py-2 border border-blue-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent text-sm"
+                            >
+                              <option value="wedSept3">Wednesday, September 3</option>
+                              <option value="thursSept4">Thursday, September 4</option>
+                              <option value="friSept5">Friday, September 5</option>
+                              <option value="satSept6">Saturday, September 6</option>
+                              <option value="sunSept7">Sunday, September 7</option>
+                            </select>
+                            <div className="flex space-x-2 mt-2">
+                              <button
+                                onClick={() => handleQRVerification(qrData)}
+                                className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 text-sm"
+                              >
+                                Try Again with Selected Day
+                              </button>
+                              <button
+                                onClick={() => handleRegisterForDay(verificationResult.registration, selectedEventDay)}
+                                className="flex-1 bg-green-600 text-white py-2 px-4 rounded-md hover:bg-green-700 text-sm"
+                              >
+                                Register for This Day
+                              </button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -704,6 +899,22 @@ const QRVerification: React.FC = () => {
               </button>
             </div>
           )}
+
+          {/* Navigation */}
+          <div className="mt-8 text-center space-x-4">
+            <button
+              onClick={() => navigate('/attendance')}
+              className="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition-colors"
+            >
+              View Attendance Dashboard
+            </button>
+            <button
+              onClick={() => navigate('/admin/dashboard')}
+              className="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              Go to Admin Dashboard
+            </button>
+          </div>
 
           {/* Hidden canvases for image processing */}
           <canvas ref={canvasRef} style={{ display: 'none' }} />

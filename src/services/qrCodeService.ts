@@ -1,19 +1,23 @@
 import QRCode from 'qrcode';
 
+// Generate a short 6-character ID
+const generateShortId = (): string => {
+  const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+  let result = '';
+  for (let i = 0; i < 6; i++) {
+    result += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return result;
+};
+
 export const qrCodeService = {
-  // Generate QR code for a registration
-  async generateQRCode(registrationId: string): Promise<{ qrCode: string; qrCodeData: string }> {
+  // Generate QR code for registration
+  async generateQRCode(shortId: string): Promise<{ qrCode: string; qrCodeData: string }> {
     try {
-      // Create QR code data with registration ID and timestamp
-      const qrData = {
-        registrationId,
-        timestamp: new Date().toISOString(),
-        event: 'Malikhaing Pinoy Expo 2025'
-      };
+      // Use the provided short ID instead of generating a new one
+      const qrCodeData = shortId;
       
-      const qrCodeData = JSON.stringify(qrData);
-      
-      // Generate QR code as base64
+      // Generate QR code image
       const qrCode = await QRCode.toDataURL(qrCodeData, {
         width: 300,
         margin: 2,
@@ -22,10 +26,10 @@ export const qrCodeService = {
           light: '#FFFFFF'
         }
       });
-      
+
       return {
         qrCode,
-        qrCodeData
+        qrCodeData: shortId // Store the short ID
       };
     } catch (error) {
       console.error('Error generating QR code:', error);
@@ -33,12 +37,19 @@ export const qrCodeService = {
     }
   },
 
+  // Generate a new short ID (for new registrations)
+  generateShortId(): string {
+    return generateShortId();
+  },
+
   // Verify QR code data
-  verifyQRCode(qrCodeData: string): { registrationId: string; timestamp: string; event: string } | null {
+  verifyQRCode(qrCodeData: string): { registrationId: string } | null {
     try {
-      const data = JSON.parse(qrCodeData);
-      if (data.registrationId && data.timestamp && data.event) {
-        return data;
+      // Check if the QR code data is a valid 6-character ID
+      if (qrCodeData && qrCodeData.length === 6 && /^[A-Z0-9]{6}$/.test(qrCodeData)) {
+        return {
+          registrationId: qrCodeData
+        };
       }
       return null;
     } catch (error) {

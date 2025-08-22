@@ -1,64 +1,48 @@
 import React from 'react';
-import { Calendar, MapPin, Building2, Users } from 'lucide-react';
+// import { Calendar, MapPin, Users } from 'lucide-react';
+import bannerLogo1 from '../assets/banner-logo-1.webp';
+import bannerLogo2 from '../assets/banner-logo-2.webp';
+import bannerLogo3 from '../assets/banner-logo-3.webp';
+import bannerLogo4 from '../assets/banner-logo-4.webp';
+import smokeBg from '../assets/SmokeBG.mp4';
+import headerPattern from '../assets/header-pcim.webp';
+import headerQR from '../assets/qrheader.webp';
 
 const Header: React.FC = () => {
   return (
-    <header className="bg-gradient-to-br from-primary-600 to-primary-700 text-white">
-      <div className="container mx-auto px-4 py-16">
+    <header className="bg-white text-primary relative h-70">
+      <video
+      playsInline
+        autoPlay
+        loop
+        muted
+        style={{
+          position: 'absolute',
+          width: '100%',
+          height: '100%',
+          objectFit: 'cover',
+          top: 0,
+          left: 0,
+          zIndex: 1,
+        }}
+      >
+        <source src={smokeBg} type="video/mp4" />
+        Your browser does not support the video tag.
+      </video>
+      <div className="container mx-auto px-4 py-16 relative z-10">
         <div className="text-center">
-          <h1 className="text-4xl md:text-6xl font-bold mb-6">
-            Malikhaing Pinoy Expo 2025
-          </h1>
-          <p className="text-xl md:text-2xl mb-8 text-primary-100 max-w-3xl mx-auto">
-            A five-day exposition showcasing the diverse and dynamic Philippine creative industries. 
-            Experience the power of Filipino creativity and innovation.
-          </p>
-          
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-4xl mx-auto mb-8">
-            <div className="flex items-center justify-center space-x-3">
-              <Calendar className="w-6 h-6 text-primary-200" />
-              <span className="text-lg">September 3-7, 2025</span>
-            </div>
-            <div className="flex items-center justify-center space-x-3">
-              <Building2 className="w-6 h-6 text-primary-200" />
-              <span className="text-lg">SMX Convention Center, SM Aura</span>
-            </div>
-            <div className="flex items-center justify-center space-x-3">
-              <MapPin className="w-6 h-6 text-primary-200" />
-              <span className="text-lg">Bonifacio Global City</span>
-            </div>
+          <div>
+            <img src={bannerLogo1} alt="DTI and Bagong Pilipinas" className="w-1/2 md:w-1/6 mx-auto mb-2 md:mb-4 bannerAnimate1" />
+            <img src={bannerLogo2} alt="Malikhaing" className="w-3/4 md:w-1/3 mx-auto mb-2 md:mb-4 bannerAnimate2" />
+            <img src={bannerLogo3} alt="Pinoy Creative Expo" className="w-3/4 md:w-1/3 mx-auto mb-2 md:mb-4 bannerAnimate3" />
+            <img src={bannerLogo4} alt="Malikhaing Pinoy Expo 2025" className="w-2/4 md:w-1/6 mx-auto mb-2 md:mb-4 bannerAnimate4" />
           </div>
 
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <button 
-              onClick={() => document.getElementById('registration')?.scrollIntoView({ behavior: 'smooth' })}
-              className="btn-primary text-lg px-8 py-4"
-            >
-              Register Now
-            </button>
-            <button 
-              onClick={() => document.getElementById('about')?.scrollIntoView({ behavior: 'smooth' })}
-              className="btn-secondary text-lg px-8 py-4"
-            >
-              Learn More
-            </button>
-          </div>
-
-          <div className="mt-12 flex items-center justify-center space-x-6 text-primary-100">
-            <div className="flex items-center space-x-2">
-              <Users className="w-5 h-5" />
-              <span>Philippine Creative Industries</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>•</span>
-              <span>9 Creative Domains</span>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span>•</span>
-              <span>DTI Initiative</span>
-            </div>
-          </div>
         </div>
+      </div>
+      <div className="flex justify-between items-end absolute bottom-0 left-0 right-0 z-10 mb-3 mx-5">
+        <img src={headerPattern} alt="Header Pattern" className="w-[10rem] md:w-[20rem]" />
+        <img src={headerQR} alt="Header QR" className="w-[5rem] md:w-[8rem]" />
       </div>
     </header>
   );

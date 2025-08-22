@@ -23,4 +23,8 @@ export const db = getFirestore(app);
 // Initialize Authentication
 export const auth = getAuth(app);
 
+// Initialize Functions with explicit region
+import { getFunctions, connectFunctionsEmulator } from 'firebase/functions';
+export const functions = getFunctions(app, 'us-central1');
+
 export default app;
